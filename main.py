@@ -1,15 +1,16 @@
-import pymongo
+#import pymongo
 from pymongo import MongoClient
+import json
 import datetime
 
 # Connect to the default port on localhost for the mongodb server.
-client = MongoClient()
+client = MongoClient("mongodb://127.0.0.1:27012")
 
 # Create or open the store database on server.
 db = client["store"]
 
 # List collection names.
-collist = db.list_collection_name()
+#collist = db.list_collection_name()
 
 # Create or open the collection in the db
 tags_collection = db["tags_collection"]
@@ -21,6 +22,15 @@ tags_collection.delete_many({})
 votes_collection.delete_many({})
 posts_collection.delete_many({})
 
-mo = tags_collection.insert_many(Tags.json)
-more = mo.inserted_ids
-print(more)
+#testing
+with open('/Users/nati/Downloads/Tags.json') as Tags:
+    Tags_data = json.load(Tags)
+tags_collection.insert_one(Tags_data)
+with open('/Users/nati/Downloads/Votes.json') as Votes:
+    Votes_data = json.load(Votes)
+votes_collection.insert_one(Votes_data)
+with open('/Users/nati/Downloads/Posts.json') as Posts:
+    Posts_data = json.load(Posts)
+posts_collection.insert_one(Posts_data)
+
+print(Tags_data)
