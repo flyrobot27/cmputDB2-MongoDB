@@ -11,7 +11,7 @@ def main():
         print("Usage: python3 main.py [MongoDB port number]")
         exit(0)
     portNo = sys.argv[1]
-    dbName = ""
+    dbName = "291db"
     client, db = mongoSetup.global_init(portNo, dbName)
 
 
