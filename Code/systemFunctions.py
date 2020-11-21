@@ -71,4 +71,40 @@ def editor(pretitle="", prebody=""):
 
 def print_report(client, db, userID):
     ''' Print user report given a userID '''
-    pass
+
+    assert type(userID) == str, 'input type incorrect'
+
+    collection_posts = db["Posts"]
+
+    reportStr = ''
+    print("\nGenerating User Report...")
+
+    reportStr += "\n*** Report for u/" + userID + ": ***\n\n"
+
+    # Find question count and average score for user
+    questions = collection_posts.find({"OwnerUserId": userID, "PostTypeId": "1"})
+    if questions.count() == 0:
+        reportStr += "No questions have been posted by u/{}.\n\n".format(userID)
+    else:
+        reportStr += "Question(s) Posted:  {}\n".format(questions.count())
+        total_score = [q["Score"] for q in questions]
+        avg = sum(total_score) / (questions.count())
+        reportStr += "Average Score:       {:.1f}\n\n".format(avg)
+
+    # Find answer count and average score for user
+    answers = collection_posts.find({"OwnerUserId": userID, "PostTypeId": "2"})
+    if answers.count() == 0:
+        reportStr += "No answers have been posted by u/{}.\n\n".format(userID)
+    else:
+        reportStr += "Answer(s) Posted:    {}\n".format(answers.count())
+        total_score = [a["Score"] for a in answers]
+        avg = sum(total_score) / (answers.count())
+        reportStr += "Average Score:       {:.1f}\n\n".format(avg)
+
+    collection_votes = db["Votes"]
+    userVotes = collection_votes.find({"UserId": userID})
+    reportStr += "Votes Casted:        {}\n".format(userVotes.count())
+    reportStr += "\n*** END OF REPORT ***\n"
+    print(reportStr)
+    _ = input("Press Enter to continue ")
+    print()

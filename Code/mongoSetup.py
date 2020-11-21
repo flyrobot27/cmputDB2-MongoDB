@@ -66,12 +66,12 @@ def db_init(client, db, collist):
         jsonPath = f[1]
         collection = f[2]
         cName = f[3]
+        print("{:<13}".format(jsonName), end='')
         with open(jsonPath) as filejson:            # attempt to open json file
             filecollect = json.load(filejson)       # convert file into python dictionary
             filecollect = filecollect[cName]['row']   # extract documents
             ret = collection.insert_many(filecollect) # store into database
-
-        print("{:<10}   [OK]".format(jsonName))
+        print("[OK]")
     
     print("Database Loaded")
 
