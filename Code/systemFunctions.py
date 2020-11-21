@@ -1,7 +1,7 @@
 try:
     import curses
 except ImportError as e:
-    print("Error: Compulsary package missing:",e)
+    print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
     exit(1)
 
