@@ -27,7 +27,7 @@ def main():
         # THIS IS FOR DEBUGGING PURPOSE ONLY SO THAT I DON'T NEED TO REBUILD THE DATABASE EVERYTIME
         # COMMENT THIS OUT DURING DEMO
         if set(['Posts', 'Tags', 'Votes']).issubset(collist):
-            raise NotImplementedError   # COMMENT THIS LINE OUT DURING DEMO TIME
+            #raise NotImplementedError   # COMMENT THIS LINE OUT DURING DEMO TIME
             pass
 
         client, db, = mongoSetup.db_init(client, db, collist)
