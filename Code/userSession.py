@@ -1,6 +1,7 @@
 try:
     from pymongo import MongoClient
     import systemFunctions
+    import re
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -29,15 +30,12 @@ def post_question(client, db, userID):
     # Prompt user to tag their post
     print("\nPlease enter your tags. Use comma (,) to seperate the tags and press Enter to finish")
     print("You may also press enter to skip this step")
-    tags = input(">>> ").lstrip().rstrip()
+    tags = input(">>> ")
     if tags != '':
         tags = tags.split(",")
-        tags = ["<" + t + ">" for t in tags]
+        tags = list(set(["<" + t.lstrip().rstrip() + ">" for t in tags]))  # Convert it into a set to remove duplicates
         print("Please review your tags:")
         print(tags)
-
-        # Tag column are added only if user supplied them
-        posts_row["Tags"] = ''.join(tags)
 
     else:
         tags = None
@@ -49,21 +47,76 @@ def post_question(client, db, userID):
     if ans not in ['y', 'Y', "yes", "Yes", "YES"]:
         print("Post Discarded")
         return
-    
-    # Assign PID
+
+    print("Posting...")
+    # obtain collection Posts
     collection_posts = db["Posts"]
+
+    # Assign PID
     maxPID = collection_posts.find_one(sort=[("Id", -1)])["Id"] # First find the document containing the max Id, then extract its Id field
     assert maxPID.isdigit(), "maxPID type error (maxPID = {})".format(maxPID)
 
     newId = int(maxPID) + 1
     posts_row["Id"] = str(newId)
-    posts_row["PostTypeId"] = "1"
+
+    posts_row["PostTypeId"] = "1" # Post type = Question
+    posts_row["CreationDate"] = systemFunctions.get_currentTime()
+    posts_row["Score"] = 0
+    posts_row["ViewCount"] = 0
+    posts_row["Body"] = body
     if userID:
         posts_row["OwnerUserId"] = userID
+    
     posts_row["Title"] = title
-    posts_row["Body"] = body
+
+    # Tag column are added only if user supplied them
+    if tags != None:
+        posts_row["Tags"] = ''.join(tags)
+
+    # initialize Answer count and comment count
+    posts_row["AnswerCount"] = 0
+    posts_row["CommentCount"] = 0
+
+    # set content license
     posts_row["ContentLicense"] = "CC BY-SA 2.5"
 
+    # insert into Posts collection
+    collection_posts.insert_one(posts_row)
+
+    if tags == None:
+        return
+    else:
+        collection_tags = db["Tags"]
+        for t in tags:
+            t = t.strip(['<','>'])
+            # Find the tag with the tagname. using regular expression for case insensitivity
+            result = collection_tags.find_one({"TagName": re.compile('^' + re.escape(t) + '$', re.IGNORECASE)})
+
+            if result.count() == 0: # if such tag did not exist, create such entry
+                new_tag = dict()
+
+                # Assign new ID
+                maxID = collection_tags.find_one(sort=[("Id", -1)])["Id"]
+                assert maxID.isdigit(), "Tag ID not digit: (ID = {})".format(maxID)
+                new_tag["Id"] = str(int(maxID) + 1)
+                new_tag["TagName"] = t
+                new_tag["Count"] = 1
+
+                collection_tags.insert_one(new_tag)
+            else:
+                assert result["Count"].isdigit(), "Tag Count not digit (Count = {})".format(result["Count"])
+
+                count = int(result["Count"]) + 1
+                collection_tags.update_one({"TagName": re.compile('^' + re.escape(t) + '$', re.IGNORECASE)}, {"$set" : {"Count": count}})
+    
+    result = collection_posts.find_one({"Id": newId})
+    if result.count() != 0:
+        print("\nSuccess\n")
+    else:
+        print("\nDatabase Error: Posting Unsuccessful\n")
+
+    return
+                
 
 def session(client, db, userID=None):
     ''' User main page where they can post questions and search questions'''
