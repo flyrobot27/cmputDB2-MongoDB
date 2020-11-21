@@ -1,5 +1,6 @@
 try:
     import sys
+    import os
     import mongoSetup
     import userSession
     import systemFunctions
@@ -75,4 +76,5 @@ if __name__ == '__main__':
         exit(0)
     except Exception as e:
         print("Fatal error:",e)
+        os.system("stty sane")
         exit(1)

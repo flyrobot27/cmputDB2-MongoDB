@@ -1,5 +1,6 @@
 try:
     import curses
+    import curses.textpad
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")

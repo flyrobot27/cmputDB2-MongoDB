@@ -1,6 +1,6 @@
 try:
     import os
-    import json.scanner
+    import json
     from pymongo import MongoClient
 except ImportError as e:
     print("Error: Compulsory package missing:",e)

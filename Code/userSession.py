@@ -14,13 +14,63 @@ def search_post(client, db, userID):
 
 def post_question(client, db, userID):
     ''' User will be prompt to an editor for typing the Question '''
-    
+
+    # Prompt user to create post
     title, body = systemFunctions.editor()
+
+    print("Please Review your post:")
+    print("Title:")
+    print(title)
+    print("Body:")
+    print(body)
+
+    posts_row = dict()  # initialize row for storing entry
+
+    # Prompt user to tag their post
+    print("\nPlease enter your tags. Use comma (,) to seperate the tags and press Enter to finish")
+    print("You may also press enter to skip this step")
+    tags = input(">>> ").lstrip().rstrip()
+    if tags != '':
+        tags = tags.split(",")
+        tags = ["<" + t + ">" for t in tags]
+        print("Please review your tags:")
+        print(tags)
+
+        # Tag column are added only if user supplied them
+        posts_row["Tags"] = ''.join(tags)
+
+    else:
+        tags = None
+        print("No tag will be added.")
+    
+    # Prompt user to confirm post
+    print()
+    ans = input("Confirm Post? (y/N) ").strip()
+    if ans not in ['y', 'Y', "yes", "Yes", "YES"]:
+        print("Post Discarded")
+        return
+    
+    # Assign PID
+    collection_posts = db["Posts"]
+    maxPID = collection_posts.find_one(sort=[("Id", -1)])["Id"] # First find the document containing the max Id, then extract its Id field
+    assert maxPID.isdigit(), "maxPID type error (maxPID = {})".format(maxPID)
+
+    newId = int(maxPID) + 1
+    posts_row["Id"] = str(newId)
+    posts_row["PostTypeId"] = "1"
+    if userID:
+        posts_row["OwnerUserId"] = userID
+    posts_row["Title"] = title
+    posts_row["Body"] = body
+    posts_row["ContentLicense"] = "CC BY-SA 2.5"
 
 
 def session(client, db, userID=None):
     ''' User main page where they can post questions and search questions'''
-    print("Welcome!")
+    if userID is not None:
+        print("Welcome! u/"+userID)
+    else:
+        print("Welcome!")
     while True:
         print("Please select an action:")
         print("1. Post a question")
