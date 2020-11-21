@@ -1,6 +1,7 @@
 try:
     import curses
     import curses.textpad
+    from datetime import datetime
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -69,6 +70,12 @@ def editor(pretitle="", prebody=""):
     curses.endwin()
 
     return title, body
+
+def get_currentTime():
+    ''' Return current date + time in the required format '''
+    date = str(datetime.now())
+    date = date[:10] + 'T' +date[11:23]
+    return date
 
 def print_report(client, db, userID):
     ''' Print user report given a userID '''
