@@ -53,7 +53,7 @@ def main():
             print("*-----------------------*")
         else:
             if int(userInput) == 1:
-                userID = input("Enter user ID (Press Enter to skip)>>> ").strip()
+                userID = input("Enter user ID (Press Enter to skip) >>> ").strip()
                 print("*-----------------------*")
 
                 if userID == '': 
