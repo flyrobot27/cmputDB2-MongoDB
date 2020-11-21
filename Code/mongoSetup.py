@@ -34,8 +34,11 @@ def db_init(client, db, collist):
     if not set(['Posts', 'Tags', 'Votes']).isdisjoint(collist):
         print("Cleaning up collections ('Posts', 'Tags', 'Votes') ")
         collection_posts.delete_many({})
+        print("Posts    [OK]")
         collection_tags.delete_many({})
+        print("Tags     [OK]")
         collection_votes.delete_many({})
+        print("Votes    [OK]")
         print("Cleanup complete")
     else:
         print("No existing collections ('Posts', 'Tags', 'Votes') detected.")
@@ -68,7 +71,7 @@ def db_init(client, db, collist):
             filecollect = filecollect[cName]['row']   # extract documents
             ret = collection.insert_many(filecollect) # store into database
 
-        print("{} [OK]".format(jsonName))
+        print("{:<10}   [OK]".format(jsonName))
     
     print("Database Loaded")
 
