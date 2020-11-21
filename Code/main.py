@@ -1,12 +1,13 @@
 try:
     import sys
     import mongoSetup
+    import userSession
+    import systemFunctions
 except ImportError as err:
     print("Import error: {}".format(err))
     exit(1)
 
 def main():
-
     # obtain DB port number
     if len(sys.argv) != 2 or sys.argv[1] in ("help", "--help", "-h"):
         print("Usage: python3 main.py [MongoDB port number]")
@@ -28,7 +29,7 @@ def main():
             raise NotImplementedError   # COMMENT THIS LINE OUT DURING DEMO TIME
             pass
 
-        client, db, dbReturn = mongoSetup.db_init(client, db, collist)
+        client, db, = mongoSetup.db_init(client, db, collist)
 
     except IOError as e:
         print("Unable to locate necessary collection files:",e)
@@ -40,7 +41,13 @@ def main():
         print("Oh God I don't want to build the database everytime I debug.")
         print("Bypassing...")
 
-    
+    userID = input("Enter user ID (Press Enter to skip)>>> ").strip()
+    if userID == '': 
+        # anonymous session
+        userSession.session(client, db)
+    else:
+        systemFunctions.print_report(client, db, userID)
+        userSession.session(client, db, userID)
 
 if __name__ == '__main__':
     try:

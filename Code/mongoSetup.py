@@ -57,8 +57,6 @@ def db_init(client, db, collist):
         ('Votes.json',votejsonpath, collection_votes, 'votes')
     ]
 
-    dbRet = dict()
-
     # Open posts.json first
     for f in filesJsonName:
         jsonName = f[0]
@@ -69,10 +67,9 @@ def db_init(client, db, collist):
             filecollect = json.load(filejson)       # convert file into python dictionary
             filecollect = filecollect[cName]['row']   # extract documents
             ret = collection.insert_many(filecollect) # store into database
-            dbRet[cName] = ret    # store return into dict
 
         print("{} [OK]".format(jsonName))
     
     print("Database Loaded")
 
-    return client, db, dbRet
+    return client, db
