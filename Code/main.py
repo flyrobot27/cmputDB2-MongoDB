@@ -1,13 +1,12 @@
 try:
     import sys
-    import os
-    import json
     import mongoSetup
 except ImportError as err:
     print("Import error: {}".format(err))
     exit(1)
 
 def main():
+
     # obtain DB port number
     if len(sys.argv) != 2 or sys.argv[1] in ("help", "--help", "-h"):
         print("Usage: python3 main.py [MongoDB port number]")
@@ -15,49 +14,21 @@ def main():
     portNo = sys.argv[1]
     dbName = "291db"
 
-    # setup connection to MongoDB
-    client, db = mongoSetup.global_init(portNo, dbName)
-
-    # Check if collection Posts, Tags or Votes exists
-    collist = db.list_collection_names()
-    collection_posts = db['posts']
-    collection_tags = db['tags']
-    collection_votes = db['votes']
-
-    if not set(['posts', 'tags', 'votes']).isdisjoint(collist):
-        print("Cleaning up collections ('posts', 'tags', 'votes') ")
-        collection_posts.delete_many({})
-        collection_tags.delete_many({})
-        collection_votes.delete_many({})
-        print("Cleanup complete")
-    else:
-        print("No existing collections ('posts', 'tags', 'votes') detected.")
-
-    print("Creating collection...")
-
+    # Initialize the program
     try:
-        # locate path for Posts.json, Tags.josn and Votes.json
-        baseDir = os.path.dirname(os.path.abspath(__file__))
-        postjsonpath = os.path.join(baseDir, 'Posts.json')
-        tagjsonpath = os.path.join(baseDir, 'Tags.json')
-        votejsonpath = os.path.join(baseDir, 'Votes.json')
+        # setup connection to MongoDB
+        client, db = mongoSetup.global_init(portNo, dbName)
 
-        if not (os.path.isfile(postjsonpath) and os.path.isfile(tagjsonpath) and os.path.isfile(votejsonpath)):
-            raise IOError
-        
-        filesJsonName = [('Posts.json',postjsonpath), ('Tags.json',tagjsonpath), ('Votes.json',votejsonpath)]
-        # Open posts.json first
-        for f in filesJsonName:
-            jsonName = f[0]
-            jsonPath = f[1]
-            with open(postjsonpath) as filejson:        # attempt to open json file
-                filecollect = json.load(filejson)       # convert file into python dictionary
-                filecollect = filecollect['posts']['row']   # extract documents
-                ret = collection_posts.insert_many(filecollect) # store into database
+        # extract list of collections
+        collist = db.list_collection_names()
 
-            print("{} [OK]".format(jsonName))
-        
-        print("Database Loaded")
+        # THIS IS FOR DEBUGGING PURPOSE ONLY SO THAT I DON'T NEED TO REBUILD THE DATABASE EVERYTIME
+        # COMMENT THIS OUT DURING DEMO
+        if set(['Posts', 'Tags', 'Votes']).issubset(collist):
+            raise NotImplementedError   # COMMENT THIS LINE OUT DURING DEMO TIME
+            pass
+
+        client, db, dbReturn = mongoSetup.db_init(client, db, collist)
 
     except IOError as e:
         print("Unable to locate necessary collection files:",e)
@@ -65,6 +36,11 @@ def main():
     except KeyError as e:
         print("Incorrect Json format.")
         exit(1)
+    except NotImplementedError:
+        print("Oh God I don't want to build the database everytime I debug.")
+        print("Bypassing...")
+
+    
 
 if __name__ == '__main__':
     try:
