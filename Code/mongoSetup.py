@@ -71,6 +71,8 @@ def db_init(client, db, collist):
             exstr = cName + ".row.item"            # extract collname.row.items
             fileobject = ijson.items(filejson, exstr)    # load file as generator
             for fo in fileobject:
+                fo["_id"] = int(fo["Id"])
+                fo.pop("Id", None)
                 collection.insert_one(fo)          # store into database
         print("[OK]")
     
