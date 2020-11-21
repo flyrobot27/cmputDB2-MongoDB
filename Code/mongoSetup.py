@@ -3,7 +3,7 @@ try:
     import json.scanner
     from pymongo import MongoClient
 except ImportError as e:
-    print("Error: Compulsary package missing:",e)
+    print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
     exit(1)
 
@@ -33,11 +33,11 @@ def db_init(client, db, collist):
 
     if not set(['Posts', 'Tags', 'Votes']).isdisjoint(collist):
         print("Cleaning up collections ('Posts', 'Tags', 'Votes') ")
-        collection_posts.delete_many({})
+        collection_posts.drop()
         print("Posts    [OK]")
-        collection_tags.delete_many({})
+        collection_tags.drop()
         print("Tags     [OK]")
-        collection_votes.delete_many({})
+        collection_votes.drop()
         print("Votes    [OK]")
         print("Cleanup complete")
     else:
