@@ -41,13 +41,31 @@ def main():
         print("Oh God I don't want to build the database everytime I debug.")
         print("Bypassing...")
 
-    userID = input("Enter user ID (Press Enter to skip)>>> ").strip()
-    if userID == '': 
-        # anonymous session
-        userSession.session(client, db)
-    else:
-        systemFunctions.print_report(client, db, userID)
-        userSession.session(client, db, userID)
+    print("*-----------------------*")
+    print("Welcome!")
+    while True:
+        print("Please Select an action:")
+        print("1. Browse the Document Store")
+        print("2. Quit")
+        userInput = input("(1/2) >>> ").strip()
+        if not userInput.isdigit() or int(userInput) not in [1,2]:
+            print("\nError: Invalid Input\n")
+            print("*-----------------------*")
+        else:
+            if int(userInput) == 1:
+                userID = input("Enter user ID (Press Enter to skip)>>> ").strip()
+                print("*-----------------------*")
+
+                if userID == '': 
+                    # anonymous session
+                    userSession.session(client, db)
+                else:
+                    # print user report then start user session
+                    systemFunctions.print_report(client, db, userID)
+                    userSession.session(client, db, userID)
+            elif int(userInput) == 2:
+                print("GoodBye")
+                exit(0)
 
 if __name__ == '__main__':
     try:
