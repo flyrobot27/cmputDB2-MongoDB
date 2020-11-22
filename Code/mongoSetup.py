@@ -1,8 +1,8 @@
 try:
     import os
-    import json
+    import ijson
     from pymongo import MongoClient
-    from multiprocessing import Pool, TimeoutError
+    from multiprocessing.dummy import Pool
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -23,6 +23,39 @@ def global_init(portNo, dbName):
     client = MongoClient(dbpath)
     db = client[dbName]
     return client, db
+
+def db_init_thread(f):
+    ''' Thread for building each db '''
+
+    jsonName = f[0]
+    fstr = "Starting to load " + jsonName
+    print(fstr)
+
+    jsonPath = f[1]
+    collection = f[2]
+    cName = f[3]
+    with open(jsonPath, 'r') as filejson:      # attempt to open json file
+        exstr = cName + ".row.item"                   # extract collname.row.items
+        fileobject = ijson.items(filejson, exstr)      # load file as generator
+
+        # store into database as batches
+        batch = list()
+        i = 0
+        MAX_BATCH_SIZE = 10000
+
+        for fo in fileobject:
+            fo["_id"] = int(fo["Id"])
+            fo.pop("Id", None)
+            batch.append(fo)
+            i += 1
+            if i >= MAX_BATCH_SIZE:  # max size of each batch reached
+                collection.insert_many(batch)          # store batches
+                batch = list()
+                i = 0
+                
+        collection.insert_many(batch)          # store remaining batches
+                
+    print("{} loaded".format(jsonName))
 
 def db_init(client, db, collist):
     ''' Build the database. Return the database and the return from database'''
@@ -62,21 +95,9 @@ def db_init(client, db, collist):
     ]
 
     # Open posts.json first
-    for f in filesJsonName:
-        jsonName = f[0]
-        print("{:<13}".format(jsonName), end='')
-
-        jsonPath = f[1]
-        collection = f[2]
-        cName = f[3]
-        with open(jsonPath, 'r') as filejson:      # attempt to open json file
-            fileobject = json.load(filejson)[cName]['row']      # load file into memory
-            for fo in fileobject:
-                fo["_id"] = int(fo["Id"])
-                fo.pop("Id", None)
-            collection.insert_many(fileobject)          # store into database
-        print("[OK]")
-    
+    with Pool(3) as p:
+        p.map(db_init_thread, filesJsonName)
+        
     print("Database Loaded")
     
     return client, db
