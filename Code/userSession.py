@@ -19,7 +19,7 @@ def answer_question(client, db, searchResult, userID):
     userInput = input(">>> ").strip()
     if not userInput.isdigit() or int(userInput) not in avaliable_posts:
         print("Error: Invalid Post ID")
-        return
+        return searchResult
     
     title, body = systemFunctions.editor()
 
@@ -70,19 +70,119 @@ def answer_question(client, db, searchResult, userID):
     try:
         anscount = int(partentPost["AnswerCount"])
         anscount += 1
+        searchResult[userInput]["AnswerCount"] += 1
     except KeyError:
         anscount = 1
+        searchResult[userInput]["AnswerCount"] = 1
 
     collection_posts.update_one({"_id": userInput}, {"$set": {"AnswerCount": anscount}})
-    searchResult[userInput]["AnswerCount"] += 1
+    
 
     check = collection_posts.find_one({"_id": newId})
     if check:
         print("\nSuccess\n")
     else:
-        raise Exception("Error: Unable to post")
+        print("\nDatabase Error: Posting Unsuccessful\n")
 
     return searchResult
+
+def view_question(client, db, searchResult):
+    ''' View a specified question '''
+
+    avaliable_posts = list(searchResult.keys())
+
+    print("Enter Post ID to view")
+    userInput = input(">>> ").strip()
+    if not userInput.isdigit() or int(userInput) not in avaliable_posts:
+        print("Error: Invalid Post ID")
+        return searchResult
+
+    collection_posts = db["Posts"]
+    userInput = int(userInput)
+    questionPost = collection_posts.find_one({"_id": userInput})
+
+    def __extract_title_body(post, answer=False):
+        ''' extract the title and body of a post'''
+        title = "None"
+        body = "None"
+        try:
+            title = post["Title"]
+            post.pop("Title", None)
+        except KeyError:
+            pass
+        
+        try:
+            body = post["Body"]
+            if answer:
+                if len(body) > 80:
+                    body = body[:80] + "..."
+            post.pop("Body", None)
+        except KeyError:
+            pass
+        return title, body
+
+    # Get accepted answer, if any
+    try:
+        accans = questionPost["AcceptedAnswerId"]
+        accans = int(accans)
+        questionPost.pop("AcceptedAnswerId", None)
+    except KeyError:
+        accans = None
+
+    # Get view count, if any
+    try:
+        viewCount = questionPost["ViewCount"] + 1
+    except KeyError:
+        viewCount = 1
+
+    collection_posts.update_one({"_id": userInput}, {"$set": {"ViewCount": viewCount}})
+    # print Question
+    print("Viewing Question p/{}".format(userInput))
+    title, body = __extract_title_body(questionPost)
+
+    systemFunctions.print_text(title, body)
+    print('-' * 90)
+    for key, item in questionPost.items():
+        key = str(key) + ":"
+        print("{:<20} {}".format(key, item))
+    print('=' * 90)
+    print("** Answers:")
+    avaliable_ans = list()
+    # check and print accepted answer
+    if accans:
+        print("\n{:^90}\n".format("*** Accepted Answer ***"))
+        accans = int(accans)
+        avaliable_ans.append(accans)
+
+        accepted_ans = collection_posts.find_one({"_id": accans})
+        title, body = __extract_title_body(accepted_ans, answer=True)
+        systemFunctions.print_text(title, body)
+        print('=' * 90)
+        for key, item in accepted_ans.items():
+            key = str(key) + ":"
+            print("{:<20} {}".format(key, item))
+    
+    parentID = str(userInput)
+    answers = collection_posts.find({"PostTypeId": "2", "ParentId": parentID})
+    for ans in answers:
+        if int(ans["_id"]) == accans:
+            continue    # accepted answer is already printed
+        avaliable_ans.append(int(ans["_id"]))
+
+        # print answers
+        title, body = __extract_title_body(ans, answer=True)
+        systemFunctions.print_text(title, body)
+        print('=' * 90)
+        for key, item in ans.items():
+            key = str(key) + ":"
+            print("{:<20} {}".format(key, item))
+    print('=' * 90)
+    print()
+    return searchResult, avaliable_ans
+
+
+def vote_post(client, db, searchResult, avaliable_answers):
+    pass
 
 def question_actions(client, db, userID, searchResult):
     ''' Function Answer, List answers, action-vote'''
@@ -102,32 +202,32 @@ def question_actions(client, db, userID, searchResult):
 
     result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
 
-    result = sorted(result, key=lambda x: x[2], reverse=True)
+    result = sorted(result, key=lambda x: x[3], reverse=True)
     systemFunctions.display_result(columnNames, result, displayStart)
 
+    avaliable_answers = list()
 
     while True:
         print("Avaliable actions:")
-        print("1: Answer a question             5: next page")
-        print("2: List answers of a question    6: previous page")
-        print("3: Vote a question               7: refresh the page")
-        print("4: Return")
-        userInput = input(">>> ").strip()
+        print("1: Answer a question             4: Next page            7: Return")
+        print("2: List answers of a question    5: Previous page")
+        print("3: Vote a post                   6: Refresh result")
+        userInput = input("(1/2/3/...) >>> ").strip()
         if not userInput.isdigit() or int(userInput) not in [1,2,3,4,5,6,7]:
             print("\nError: Invalid input\n")
         else:
             userInput = int(userInput)
-            if userInput == 4:
+            if userInput == 7:
                 print()
                 print("Welcome back")
                 return
             elif userInput == 1:
                 searchResult = answer_question(client, db, searchResult, userID)
             elif userInput == 2:
-                pass
+                searchResult, avaliable_answers = view_question(client, db, searchResult)
             elif userInput == 3:
-                pass
-            elif userInput == 5:
+                searchResult = vote_post(client, db, searchResult, avaliable_answers)
+            elif userInput == 4:
                 # Next page
                 displayStart += 10
                 if displayStart >= len(avaliable_posts):
@@ -135,7 +235,7 @@ def question_actions(client, db, userID, searchResult):
                 else:
                     systemFunctions.display_result(columnNames, result, displayStart)
 
-            elif userInput == 6:
+            elif userInput == 5:
                 # Prev page
                 displayStart -= 10
                 if displayStart <= 0:
@@ -143,7 +243,10 @@ def question_actions(client, db, userID, searchResult):
                 else:
                     systemFunctions.display_result(columnNames, result, displayStart)
 
-            elif userInput == 7:
+            elif userInput == 6:
+                # Refresh display, assuming changes in searchResult
+                result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
+                result = sorted(result, key=lambda x: x[2], reverse=True)
                 systemFunctions.display_result(columnNames, result, displayStart)
 
             else:
@@ -161,12 +264,12 @@ def __convert_to_dict(item):
     return json.loads(item)
 
 DB = None
-def initialize_db(db):
-    ''' initialize db and collection for multithreading '''
+def __initialize_db(db):
+    ''' initialize db for multithreading '''
     global DB
     DB = db
 
-def search_thread(kw):
+def __search_thread(kw):
     ''' distribute search for each keyword '''
     kw = kw.strip()
     columns = ["Title", "Body", "Tags"]
@@ -177,12 +280,12 @@ def search_thread(kw):
     collection_posts = DB["Posts"]
 
     with Pool(3) as p:
-        result = list(p.map(partial(search_subthread, collection_posts, findrgx), columns))
+        result = list(p.map(partial(__search_subthread, collection_posts, findrgx), columns))
 
     searchResult = set.union(*result)
     return searchResult
 
-def search_subthread(collection_posts, findrgx, columnNames):
+def __search_subthread(collection_posts, findrgx, columnNames):
     ''' Search for each column '''
     result = collection_posts.find({"$and": [{"PostTypeId": "1", columnNames: findrgx}]})
 
@@ -195,7 +298,7 @@ def search_question(client, db, userID, keywords):
     ''' Search all matching questions given keywords '''
     print("Searching...")
     searchResult = list()
-    initialize_db(db)
+    __initialize_db(db)
     # Remove duplicates
     keywords = list(set(keywords))
     if len(keywords) == 0:
@@ -203,7 +306,7 @@ def search_question(client, db, userID, keywords):
     cpuava = multiprocessing.cpu_count()
     # spawn thread for every keyword for faster search
     with Pool(cpuava) as p:
-        searchResult = list(p.map(search_thread, keywords))
+        searchResult = list(p.map(__search_thread, keywords))
 
     # remove duplicated result
     searchResult = set.union(*searchResult)
@@ -280,7 +383,7 @@ def post_question(client, db, userID):
     # initialize Answer count and comment count
     posts_row["AnswerCount"] = 0
     posts_row["CommentCount"] = 0
-
+    posts_row["FavoriteCount"] = 0
     # set content license
     posts_row["ContentLicense"] = "CC BY-SA 2.5"
 
