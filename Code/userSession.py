@@ -3,6 +3,7 @@ try:
     import systemFunctions
     import re
     import json
+    from multiprocessing import Pool, TimeoutError
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -21,6 +22,14 @@ def question_actions(client, db, userID, searchResult):
     systemFunctions.display_result(columnNames, result, displayStart)
 
 
+def __convert_to_string(item):
+    ''' convert dict to string '''
+    return json.dumps(item, sort_keys=True)
+
+def __convert_to_dict(item):
+    ''' convert string to dict '''
+    return json.loads(item)
+
 def search_question(client, db, userID, keywords):
     ''' Search all matching questions given keywords '''
 
@@ -30,25 +39,23 @@ def search_question(client, db, userID, keywords):
         kw = kw.strip()
         findrgx = re.compile(".*" + kw + ".*", re.IGNORECASE)
 
-        
-        def convert_to_string(item):
-            return json.dumps(item, sort_keys=True)
+        with Pool(4) as p:  # using multithreading module to speed up the process
+            # find matchings in Title
+            result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
+            result_title = set(p.map(__convert_to_string, result_title))
 
-        result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
-        result_title = set(map(convert_to_string, result_title))
+            # find matchings in Body
+            result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
+            result_body = set(p.map(__convert_to_string, result_body))
 
-        result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
-        result_body = set(map(convert_to_string, result_body))
-
-        result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
-        result_tags = set(map(convert_to_string, result_tags))
+            # find matchings in Tags
+            result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
+            result_tags = set(p.map(__convert_to_string, result_tags))
 
         searchResult = result_title.union(result_body.union(result_tags))
 
-    def convert_to_dict(item):
-        return json.loads(item)
-
-    returnResult = list(map(convert_to_dict, searchResult))
+    with Pool(4) as p:
+        returnResult = list(p.map(__convert_to_dict, searchResult))
 
     return returnResult
 
