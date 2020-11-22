@@ -65,8 +65,12 @@ def main():
                     systemFunctions.print_report(client, db, userID)
                     userSession.session(client, db, userID)
             elif int(userInput) == 2:
-                print("GoodBye")
-                exit(0)
+                ans = input("Are you sure you want to quit? (y/N) ")
+                if ans.strip() in ['y', 'Y', "yes", "Yes", "YES"]:
+                    print("GoodBye")
+                    exit(0)
+                else:
+                    print()
 
 if __name__ == '__main__':
     try:
