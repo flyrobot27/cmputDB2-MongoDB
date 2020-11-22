@@ -53,11 +53,11 @@ def post_question(client, db, userID):
     collection_posts = db["Posts"]
 
     # Assign PID
-    maxPID = collection_posts.find_one(sort=[("Id", -1)])["Id"] # First find the document containing the max Id, then extract its Id field
-    assert maxPID.isdigit(), "maxPID type error (maxPID = {})".format(maxPID)
+    maxPID = collection_posts.find_one(sort=[("_id", -1)])["_id"] # First find the document containing the max Id, then extract its Id field
+    assert type(maxPID) == int, "maxPID type error (maxPID = {})".format(maxPID)
 
-    newId = int(maxPID) + 1
-    posts_row["Id"] = str(newId)
+    newId = maxPID + 1
+    posts_row["_id"] = newId
 
     posts_row["PostTypeId"] = "1" # Post type = Question
     posts_row["CreationDate"] = systemFunctions.get_currentTime()
@@ -80,6 +80,7 @@ def post_question(client, db, userID):
     # set content license
     posts_row["ContentLicense"] = "CC BY-SA 2.5"
 
+    print(posts_row)
     # insert into Posts collection
     collection_posts.insert_one(posts_row)
 
@@ -88,29 +89,31 @@ def post_question(client, db, userID):
     else:
         collection_tags = db["Tags"]
         for t in tags:
-            t = t.strip(['<','>'])
+            # Remove < >
+            t = t.replace('<','').replace('>','')
+
             # Find the tag with the tagname. using regular expression for case insensitivity
             result = collection_tags.find_one({"TagName": re.compile('^' + re.escape(t) + '$', re.IGNORECASE)})
 
-            if result.count() == 0: # if such tag did not exist, create such entry
+            if not result: # if such tag did not exist, create such entry
                 new_tag = dict()
 
                 # Assign new ID
-                maxID = collection_tags.find_one(sort=[("Id", -1)])["Id"]
-                assert maxID.isdigit(), "Tag ID not digit: (ID = {})".format(maxID)
-                new_tag["Id"] = str(int(maxID) + 1)
+                maxID = collection_tags.find_one(sort=[("_id", -1)])["_id"]
+                assert type(maxID) == int, "Tag ID not digit: (ID = {})".format(maxID)
+                new_tag["_id"] = maxID + 1
                 new_tag["TagName"] = t
                 new_tag["Count"] = 1
 
                 collection_tags.insert_one(new_tag)
             else:
-                assert result["Count"].isdigit(), "Tag Count not digit (Count = {})".format(result["Count"])
+                assert type(result["Count"]) == int, "Tag Count not digit (Count = {})".format(result["Count"])
 
-                count = int(result["Count"]) + 1
+                count = result["Count"] + 1
                 collection_tags.update_one({"TagName": re.compile('^' + re.escape(t) + '$', re.IGNORECASE)}, {"$set" : {"Count": count}})
     
-    result = collection_posts.find_one({"Id": newId})
-    if result.count() != 0:
+    result = collection_posts.find({"_id": newId})
+    if result:
         print("\nSuccess\n")
     else:
         print("\nDatabase Error: Posting Unsuccessful\n")
