@@ -3,7 +3,8 @@ try:
     import systemFunctions
     import re
     import json
-    from multiprocessing import Pool, TimeoutError
+    from multiprocessing.dummy import Pool
+    from functools import partial
     import multiprocessing
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
@@ -31,30 +32,52 @@ def __convert_to_dict(item):
     ''' convert string to dict '''
     return json.loads(item)
 
+DB = None
+def initialize_db(db):
+    ''' initialize db and collection for multithreading '''
+    global DB
+    DB = db
+
+def search_thread(kw):
+    ''' distribute search for each keyword '''
+    kw = kw.strip()
+    columns = ["Title", "Body", "Tags"]
+    searchResult = set()
+    findrgx = re.compile('.*' + re.escape(kw) + '.*', re.IGNORECASE)
+    global DB
+    collection_posts = DB["Posts"]
+    with Pool(3) as p:  # using multithreading module to speed up the process
+        # find matchings in Title
+        result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
+        result_title = set(p.map(__convert_to_string, result_title))
+
+        # find matchings in Body
+        result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
+        result_body = set(p.map(__convert_to_string, result_body))
+
+        # find matchings in Tags
+        result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
+        result_tags = set(p.map(__convert_to_string, result_tags))
+
+    searchResult = searchResult.union(result_title.union(result_body.union(result_tags)))
+    return searchResult
+
 def search_question(client, db, userID, keywords):
     ''' Search all matching questions given keywords '''
 
-    searchResult = set()
-    collection_posts = db["Posts"]
-    for kw in keywords:
-        kw = kw.strip()
-        findrgx = re.compile(".*" + kw + ".*", re.IGNORECASE)
-        cpuava = int (multiprocessing.cpu_count()) - int(multiprocessing.cpu_count() / 4) + 1
-        with Pool(cpuava) as p:  # using multithreading module to speed up the process
-            # find matchings in Title
-            result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
-            result_title = set(p.map(__convert_to_string, result_title))
+    searchResult = list()
+    initialize_db(db)
+    # Remove duplicates
+    keywords = list(set(keywords))
 
-            # find matchings in Body
-            result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
-            result_body = set(p.map(__convert_to_string, result_body))
+    # spawn thread for every keyword for faster search
+    with Pool(len(keywords)) as p:
+        searchResult = list(p.map(search_thread, keywords))
 
-            # find matchings in Tags
-            result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
-            result_tags = set(p.map(__convert_to_string, result_tags))
+    # remove duplicated result
+    searchResult = set.union(*searchResult)
 
-        searchResult = searchResult.union(result_title.union(result_body.union(result_tags)))
-
+    # convert result to dict
     with Pool(4) as p:
         returnResult = list(p.map(__convert_to_dict, searchResult))
 
