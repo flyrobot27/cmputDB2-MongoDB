@@ -2,16 +2,55 @@ try:
     from pymongo import MongoClient
     import systemFunctions
     import re
+    import json
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
     exit(1)
 
 def question_actions(client, db, userID, searchResult):
-    pass
+    ''' Function Answer, List answers, action-vote'''
+    columnNames = ["Post no.", "Title", "CreationDate", "Score", "AnswerCount"]
+    displayStart = 0
 
-def search_post(client, db, userID):
-    return []
+    result = [[r["Title"], r["CreationDate"], r["Score"], r["AnswerCount"]] for r in searchResult]
+    result = sorted(result, key=lambda x: x[2], reverse=True)
+
+    result = [[i, *result[i - 1]] for i in range(1, len(result) + 1)]
+    
+    systemFunctions.display_result(columnNames, result, displayStart)
+
+
+def search_question(client, db, userID, keywords):
+    ''' Search all matching questions given keywords '''
+
+    searchResult = set()
+    collection_posts = db["Posts"]
+    for kw in keywords:
+        kw = kw.strip()
+        findrgx = re.compile(".*" + kw + ".*", re.IGNORECASE)
+
+        
+        def convert_to_string(item):
+            return json.dumps(item, sort_keys=True)
+
+        result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
+        result_title = set(map(convert_to_string, result_title))
+
+        result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
+        result_body = set(map(convert_to_string, result_body))
+
+        result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
+        result_tags = set(map(convert_to_string, result_tags))
+
+        searchResult = result_title.union(result_body.union(result_tags))
+
+    def convert_to_dict(item):
+        return json.loads(item)
+
+    returnResult = list(map(convert_to_dict, searchResult))
+
+    return returnResult
 
 def post_question(client, db, userID):
     ''' User will be prompt to an editor for typing the Question '''
@@ -80,10 +119,10 @@ def post_question(client, db, userID):
     # set content license
     posts_row["ContentLicense"] = "CC BY-SA 2.5"
 
-    print(posts_row)
     # insert into Posts collection
     collection_posts.insert_one(posts_row)
 
+    # inserting tags into Tags collection
     if tags == None:
         return
     else:
@@ -136,11 +175,18 @@ def session(client, db, userID=None):
         if not userInput.isdigit() or int(userInput) not in [1,2,3]:
             print("\nError: Invalid Input\n")
         elif int(userInput) == 1:
+            # Prompt for post question
             post_question(client, db, userID)
+
         elif int(userInput) == 2:
-            result = search_post(client, db, userID)
+            # Prompt for typing keywords and search
+            print("Enter your keyboards (space separated):")
+            keywords = input(">>> ").split()
+            result = search_question(client, db, userID, keywords)
             question_actions(client, db, userID, result)
+
         elif int(userInput) == 3:
+            # Quit
             print("\nReturning to Home Page")
             print("*-----------------------*")
             return

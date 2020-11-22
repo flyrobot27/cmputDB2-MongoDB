@@ -77,6 +77,41 @@ def get_currentTime():
     date = date[:10] + 'T' +date[11:23]
     return date
 
+def display_result(columnNames, result, displayStart):
+    '''
+    Display results in a command line table
+    columnNames and results will be tuple of strings or integer
+    It will only display at most 10 results
+    '''
+    resultLength = len(result)
+
+    displayEnd = displayStart + 10  # at most 5 results per page
+    if displayEnd >= resultLength: # prevent integer overflow
+        displayEnd = resultLength
+
+    displayResult = result[displayStart:displayEnd]
+
+    # Format result to ensure they do not exceed specific length
+    for text in displayResult:
+        # remove newline and tab
+        title = text[1]
+        title = title.replace("\n",'').replace("\t",'')
+        if len(title) > 50:
+            title = title[:47]
+            title += "..."
+        text[1] = title
+        
+    print()
+    print('='*111)
+    print("{:<9}  {:<50}  {:<25}  {:>7}  {:>11}".format(*columnNames))
+    print("-"*9+"  "+"-"*50+"  "+"-"*25+"  "+"-"*7+"  "+"-"*11) 
+    for text in displayResult:
+        print("{:<9}  {:<50}  {:<25}  {:>7}  {:>11}".format(*text))
+    print('='*111)
+    print("Displaying Result ({0}-{1})/{2}".format(str(displayStart + 1), displayEnd, resultLength))
+    print()
+    return
+
 def print_report(client, db, userID):
     ''' Print user report given a userID '''
 
@@ -116,3 +151,55 @@ def print_report(client, db, userID):
     print(reportStr)
     _ = input("Press Enter to continue ")
     print()
+
+def print_text(title, body):
+    '''
+    A simple function to print the title and body
+    Imported from project 1
+    '''
+
+    def _parse(text):
+        '''
+        Parse the given text to the length 90
+        '''
+
+        newtext = list(text)
+        accu = 0
+        i = 0
+        while i < len(text):
+            if newtext[i] == '\n':
+                accu = 0
+                i += 1
+            else:
+                if accu > 88:
+                    if newtext[i] == " ":
+                        newtext.insert(i+1, '\n')
+                    elif newtext[i - 1] == " ":
+                        newtext.insert(i, '\n')
+                    else:
+                        newtext.insert(i, "-\n")
+
+                    accu = 0
+                else:
+                    accu += 1
+                
+                i += 1
+
+        return ''.join(newtext)
+
+    print("-" * 90)
+    if len(title) < 83:
+        print("Title:",title)
+    else:
+        newtitle = _parse(title)
+        print("Title:")
+        print(newtitle)
+
+    print("- " * 45)
+
+    if len(body) < 83:
+        print(body)
+    else:
+        newbody = _parse(body)
+        print()
+        print(newbody)
