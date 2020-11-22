@@ -39,7 +39,7 @@ def search_question(client, db, userID, keywords):
     for kw in keywords:
         kw = kw.strip()
         findrgx = re.compile(".*" + kw + ".*", re.IGNORECASE)
-        cpuava = int(multiprocessing.cpu_count() / 2) + 1
+        cpuava = int (multiprocessing.cpu_count()) - int(multiprocessing.cpu_count() / 4) + 1
         with Pool(cpuava) as p:  # using multithreading module to speed up the process
             # find matchings in Title
             result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
