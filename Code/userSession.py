@@ -52,7 +52,7 @@ def search_question(client, db, userID, keywords):
             result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
             result_tags = set(p.map(__convert_to_string, result_tags))
 
-        searchResult = result_title.union(result_body.union(result_tags))
+        searchResult = searchResult.union(result_title.union(result_body.union(result_tags)))
 
     with Pool(4) as p:
         returnResult = list(p.map(__convert_to_dict, searchResult))
