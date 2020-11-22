@@ -29,7 +29,7 @@ def question_actions(client, db, userID, searchResult):
     del result_dict
 
     avaliable_posts = list(searchResult.keys())
-    
+
     result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
 
     result = sorted(result, key=lambda x: x[2], reverse=True)
@@ -86,7 +86,10 @@ def search_thread(kw):
 def search_subthread(collection_posts, findrgx, columnNames):
     ''' Search for each column '''
     result = collection_posts.find({"$and": [{"PostTypeId": "1", columnNames: findrgx}]})
-    result = set(map(__convert_to_string, result))
+    
+    with Pool(4) as p:
+        result = set(p.map(__convert_to_string, result))
+
     return result
 
 def search_question(client, db, userID, keywords):
