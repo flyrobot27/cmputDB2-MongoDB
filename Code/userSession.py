@@ -4,6 +4,7 @@ try:
     import re
     import json
     from multiprocessing import Pool, TimeoutError
+    import multiprocessing
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -38,8 +39,8 @@ def search_question(client, db, userID, keywords):
     for kw in keywords:
         kw = kw.strip()
         findrgx = re.compile(".*" + kw + ".*", re.IGNORECASE)
-
-        with Pool(4) as p:  # using multithreading module to speed up the process
+        cpuava = int(multiprocessing.cpu_count() / 2) + 1
+        with Pool(cpuava) as p:  # using multithreading module to speed up the process
             # find matchings in Title
             result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
             result_title = set(p.map(__convert_to_string, result_title))
