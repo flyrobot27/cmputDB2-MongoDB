@@ -102,12 +102,12 @@ def display_result(columnNames, result, displayStart):
         text[1] = title
         
     print()
-    print('='*111)
-    print("{:<9}  {:<50}  {:<25}  {:>7}  {:>11}".format(*columnNames))
-    print("-"*9+"  "+"-"*50+"  "+"-"*25+"  "+"-"*7+"  "+"-"*11) 
+    print('='*112)
+    print("{:<10}  {:<50}  {:<25}  {:>7}  {:>11}".format(*columnNames))
+    print("-"*10+"  "+"-"*50+"  "+"-"*25+"  "+"-"*7+"  "+"-"*11) 
     for text in displayResult:
-        print("{:<9}  {:<50}  {:<25}  {:>7}  {:>11}".format(*text))
-    print('='*111)
+        print("{:<10}  {:<50}  {:<25}  {:>7}  {:>11}".format(*text))
+    print('='*112)
     print("Displaying Result ({0}-{1})/{2}".format(str(displayStart + 1), displayEnd, resultLength))
     print()
     return

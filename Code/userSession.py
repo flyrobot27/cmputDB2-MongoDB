@@ -11,17 +11,46 @@ except ImportError as e:
     print("Please ensure requirements are satisfied.")
     exit(1)
 
+def answer_question(client, db, posts):
+    ''' answer a question '''
+
 def question_actions(client, db, userID, searchResult):
     ''' Function Answer, List answers, action-vote'''
-    columnNames = ["Post no.", "Title", "CreationDate", "Score", "AnswerCount"]
+    columnNames = ["Post ID", "Title", "CreationDate", "Score", "AnswerCount"]
     displayStart = 0
 
-    result = [[r["Title"], r["CreationDate"], r["Score"], r["AnswerCount"]] for r in searchResult]
-    result = sorted(result, key=lambda x: x[2], reverse=True)
+    result_dict = dict()
+    for r in searchResult:
+        key = r["_id"]
+        del r["_id"]
+        result_dict[key] = r
 
-    result = [[i, *result[i - 1]] for i in range(1, len(result) + 1)]
+    searchResult = result_dict
+    del result_dict
+
+    avaliable_posts = list(searchResult.keys())
     
+    result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
+
+    result = sorted(result, key=lambda x: x[2], reverse=True)
     systemFunctions.display_result(columnNames, result, displayStart)
+
+
+    while True:
+        print("Avaliable actions:")
+        print("1: Answer a question             5: next page")
+        print("2: List answers of a question    6: previous page")
+        print("3: Vote a question               7: refresh the page")
+        print("4: Return")
+        userInput = input(">>> ").strip()
+        if not userInput.isdigit() or int(userInput) not in [1,2,3,4,5,6,7]:
+            print("\nError: Invalid input\n")
+        else:
+            userInput = int(userInput)
+            if userInput == 1:
+                answer_question(client, db)
+            
+            
 
 # The following functions are for multithreaded searh function implementation
 def __convert_to_string(item):
@@ -62,12 +91,14 @@ def search_subthread(collection_posts, findrgx, columnNames):
 
 def search_question(client, db, userID, keywords):
     ''' Search all matching questions given keywords '''
-
+    print("Searching...")
     searchResult = list()
     initialize_db(db)
     # Remove duplicates
     keywords = list(set(keywords))
-
+    if len(keywords) == 0:
+        return None
+    
     # spawn thread for every keyword for faster search
     with Pool(len(keywords)) as p:
         searchResult = list(p.map(search_thread, keywords))
@@ -81,7 +112,7 @@ def search_question(client, db, userID, keywords):
         returnResult = list(p.map(__convert_to_dict, searchResult))
 
     return returnResult
-    
+
 # end of search function
 
 
@@ -216,7 +247,10 @@ def session(client, db, userID=None):
             print("Enter your keyboards (space separated):")
             keywords = input(">>> ").split()
             result = search_question(client, db, userID, keywords)
-            question_actions(client, db, userID, result)
+            if not result:
+                print("\nNo result\n")
+            else:
+                question_actions(client, db, userID, result)
 
         elif int(userInput) == 3:
             # Quit
