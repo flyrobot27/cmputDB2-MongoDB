@@ -23,7 +23,7 @@ def question_actions(client, db, userID, searchResult):
     
     systemFunctions.display_result(columnNames, result, displayStart)
 
-
+# The following functions are for multithreaded searh function implementation
 def __convert_to_string(item):
     ''' convert dict to string '''
     return json.dumps(item, sort_keys=True)
@@ -44,23 +44,21 @@ def search_thread(kw):
     columns = ["Title", "Body", "Tags"]
     searchResult = set()
     findrgx = re.compile('.*' + re.escape(kw) + '.*', re.IGNORECASE)
+
     global DB
     collection_posts = DB["Posts"]
-    with Pool(3) as p:  # using multithreading module to speed up the process
-        # find matchings in Title
-        result_title = collection_posts.find({"$and": [{"PostTypeId": "1", "Title": findrgx}]})
-        result_title = set(p.map(__convert_to_string, result_title))
 
-        # find matchings in Body
-        result_body = collection_posts.find({"$and": [{"PostTypeId": "1", "Body": findrgx}]})
-        result_body = set(p.map(__convert_to_string, result_body))
+    with Pool(3) as p:
+        result = list(p.map(partial(search_subthread, collection_posts, findrgx), columns))
 
-        # find matchings in Tags
-        result_tags = collection_posts.find({"$and": [{"PostTypeId": "1", "Tags": findrgx}]})
-        result_tags = set(p.map(__convert_to_string, result_tags))
-
-    searchResult = searchResult.union(result_title.union(result_body.union(result_tags)))
+    searchResult = set.union(*result)
     return searchResult
+
+def search_subthread(collection_posts, findrgx, columnNames):
+    ''' Search for each column '''
+    result = collection_posts.find({"$and": [{"PostTypeId": "1", columnNames: findrgx}]})
+    result = set(map(__convert_to_string, result))
+    return result
 
 def search_question(client, db, userID, keywords):
     ''' Search all matching questions given keywords '''
@@ -78,10 +76,14 @@ def search_question(client, db, userID, keywords):
     searchResult = set.union(*searchResult)
 
     # convert result to dict
-    with Pool(4) as p:
+    cpuava = multiprocessing.cpu_count()
+    with Pool(cpuava) as p:
         returnResult = list(p.map(__convert_to_dict, searchResult))
 
     return returnResult
+    
+# end of search function
+
 
 def post_question(client, db, userID):
     ''' User will be prompt to an editor for typing the Question '''
