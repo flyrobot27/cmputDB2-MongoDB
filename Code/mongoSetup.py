@@ -52,7 +52,7 @@ def db_init_thread(f):
                 collection.insert_many(batch)          # store batches
                 batch = list()
                 i = 0
-                
+
         collection.insert_many(batch)          # store remaining batches
                 
     print("{} loaded".format(jsonName))
@@ -94,10 +94,10 @@ def db_init(client, db, collist):
         ('Votes.json',votejsonpath, collection_votes, 'votes')
     ]
 
-    # Open posts.json first
+    # load database
     with Pool(3) as p:
         p.map(db_init_thread, filesJsonName)
         
-    print("Database Loaded")
+    print("\n*** Database Loaded *** \n")
     
     return client, db
