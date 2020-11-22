@@ -50,6 +50,7 @@ def db_init_thread(f):
             i += 1
             if i >= MAX_BATCH_SIZE:  # max size of each batch reached
                 collection.insert_many(batch)          # store batches
+                del batch
                 batch = list()
                 i = 0
 
