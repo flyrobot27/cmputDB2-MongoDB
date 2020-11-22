@@ -2,6 +2,7 @@ try:
     import os
     import json
     from pymongo import MongoClient
+    from multiprocessing import Pool, TimeoutError
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
     print("Please ensure requirements are satisfied.")
@@ -63,10 +64,11 @@ def db_init(client, db, collist):
     # Open posts.json first
     for f in filesJsonName:
         jsonName = f[0]
+        print("{:<13}".format(jsonName), end='')
+
         jsonPath = f[1]
         collection = f[2]
         cName = f[3]
-        print("{:<13}".format(jsonName), end='')
         with open(jsonPath, 'r') as filejson:      # attempt to open json file
             fileobject = json.load(filejson)[cName]['row']      # load file into memory
             for fo in fileobject:
@@ -76,5 +78,5 @@ def db_init(client, db, collist):
         print("[OK]")
     
     print("Database Loaded")
-
+    
     return client, db
