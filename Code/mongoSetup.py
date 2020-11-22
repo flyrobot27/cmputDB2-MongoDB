@@ -1,6 +1,6 @@
 try:
     import os
-    import ijson
+    import json
     from pymongo import MongoClient
 except ImportError as e:
     print("Error: Compulsory package missing:",e)
@@ -68,12 +68,11 @@ def db_init(client, db, collist):
         cName = f[3]
         print("{:<13}".format(jsonName), end='')
         with open(jsonPath, 'r') as filejson:      # attempt to open json file
-            exstr = cName + ".row.item"            # extract collname.row.items
-            fileobject = ijson.items(filejson, exstr)    # load file as generator
+            fileobject = json.load(filejson)[cName]['row']      # load file into memory
             for fo in fileobject:
                 fo["_id"] = int(fo["Id"])
                 fo.pop("Id", None)
-                collection.insert_one(fo)          # store into database
+            collection.insert_many(fileobject)          # store into database
         print("[OK]")
     
     print("Database Loaded")
