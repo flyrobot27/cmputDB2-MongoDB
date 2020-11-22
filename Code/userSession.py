@@ -11,8 +11,78 @@ except ImportError as e:
     print("Please ensure requirements are satisfied.")
     exit(1)
 
-def answer_question(client, db, posts):
+def answer_question(client, db, searchResult, userID):
     ''' answer a question '''
+    avaliable_posts = list(searchResult.keys())
+
+    print("Enter Post ID to answer")
+    userInput = input(">>> ").strip()
+    if not userInput.isdigit() or int(userInput) not in avaliable_posts:
+        print("Error: Invalid Post ID")
+        return
+    
+    title, body = systemFunctions.editor()
+
+    print("Please Review your post:")
+    print("Title:")
+    print(title)
+    print("Body:")
+    print(body)
+    print()
+
+    ans = input("Confirm Post? (y/N) ").strip()
+    if ans not in ['y', 'Y', "yes", "Yes", "YES"]:
+        print("Post Discarded")
+        return
+
+    print("Posting...")
+    posts_row = dict()  # initialize row for storing entry
+    collection_posts = db["Posts"]
+
+    # Assign PID
+    maxPID = collection_posts.find_one(sort=[("_id", -1)])["_id"] # First find the document containing the max Id, then extract its Id field
+    assert type(maxPID) == int, "maxPID type error (maxPID = {})".format(maxPID)
+
+    newId = maxPID + 1
+    posts_row["_id"] = newId
+
+    posts_row["PostTypeId"] = "2" # Post type = Answer
+    posts_row["ParentId"] = str(userInput)
+    posts_row["CreationDate"] = systemFunctions.get_currentTime()
+    posts_row["Score"] = 0
+    posts_row["Body"] = body
+    if userID:
+        posts_row["OwnerUserId"] = userID
+    
+    posts_row["Title"] = title
+
+    # initialize comment count
+    posts_row["CommentCount"] = 0
+
+    # set content license
+    posts_row["ContentLicense"] = "CC BY-SA 2.5"
+
+    collection_posts.insert_one(posts_row)
+
+    userInput = int(userInput)
+    partentPost = collection_posts.find_one({"_id": userInput})
+
+    try:
+        anscount = int(partentPost["AnswerCount"])
+        anscount += 1
+    except KeyError:
+        anscount = 1
+
+    collection_posts.update_one({"_id": userInput}, {"$set": {"AnswerCount": anscount}})
+    searchResult[userInput]["AnswerCount"] += 1
+
+    check = collection_posts.find_one({"_id": newId})
+    if check:
+        print("\nSuccess\n")
+    else:
+        raise Exception("Error: Unable to post")
+
+    return searchResult
 
 def question_actions(client, db, userID, searchResult):
     ''' Function Answer, List answers, action-vote'''
@@ -47,9 +117,38 @@ def question_actions(client, db, userID, searchResult):
             print("\nError: Invalid input\n")
         else:
             userInput = int(userInput)
-            if userInput == 1:
-                answer_question(client, db)
-            
+            if userInput == 4:
+                print()
+                print("Welcome back")
+                return
+            elif userInput == 1:
+                searchResult = answer_question(client, db, searchResult, userID)
+            elif userInput == 2:
+                pass
+            elif userInput == 3:
+                pass
+            elif userInput == 5:
+                # Next page
+                displayStart += 10
+                if displayStart >= len(avaliable_posts):
+                    print("Error: This is the last page")
+                else:
+                    systemFunctions.display_result(columnNames, result, displayStart)
+
+            elif userInput == 6:
+                # Prev page
+                displayStart -= 10
+                if displayStart <= 0:
+                    print("Error: This is the first page")
+                else:
+                    systemFunctions.display_result(columnNames, result, displayStart)
+
+            elif userInput == 7:
+                systemFunctions.display_result(columnNames, result, displayStart)
+
+            else:
+                print("Error: Invalid Input")
+
             
 
 # The following functions are for multithreaded searh function implementation
@@ -86,7 +185,7 @@ def search_thread(kw):
 def search_subthread(collection_posts, findrgx, columnNames):
     ''' Search for each column '''
     result = collection_posts.find({"$and": [{"PostTypeId": "1", columnNames: findrgx}]})
-    
+
     with Pool(4) as p:
         result = set(p.map(__convert_to_string, result))
 
@@ -101,16 +200,15 @@ def search_question(client, db, userID, keywords):
     keywords = list(set(keywords))
     if len(keywords) == 0:
         return None
-    
+    cpuava = multiprocessing.cpu_count()
     # spawn thread for every keyword for faster search
-    with Pool(len(keywords)) as p:
+    with Pool(cpuava) as p:
         searchResult = list(p.map(search_thread, keywords))
 
     # remove duplicated result
     searchResult = set.union(*searchResult)
 
     # convert result to dict
-    cpuava = multiprocessing.cpu_count()
     with Pool(cpuava) as p:
         returnResult = list(p.map(__convert_to_dict, searchResult))
 
