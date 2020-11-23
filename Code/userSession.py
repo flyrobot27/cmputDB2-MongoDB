@@ -95,7 +95,7 @@ def view_question(client, db, searchResult, userID):
     userInput = input(">>> ").strip()
     if not userInput.isdigit() or int(userInput) not in avaliable_posts:
         print("Error: Invalid Post ID")
-        return searchResult
+        return searchResult, list()
 
     collection_posts = db["Posts"]
     userInput = int(userInput)
@@ -319,7 +319,7 @@ def question_actions(client, db, userID, searchResult):
 
     result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
 
-    result = sorted(result, key=lambda x: x[3], reverse=True)
+    #result = sorted(result, key=lambda x: x[3], reverse=True)
     systemFunctions.display_result(columnNames, result, displayStart)
 
     avaliable_answers = list()
@@ -364,7 +364,7 @@ def question_actions(client, db, userID, searchResult):
             elif userInput == 6:
                 # Refresh display, assuming changes in searchResult
                 result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
-                result = sorted(result, key=lambda x: x[3], reverse=True)
+                #result = sorted(result, key=lambda x: x[3], reverse=True)
                 systemFunctions.display_result(columnNames, result, displayStart)
 
             else:
