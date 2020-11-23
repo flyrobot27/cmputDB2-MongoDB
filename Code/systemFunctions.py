@@ -85,7 +85,7 @@ def display_result(columnNames, result, displayStart):
     '''
     resultLength = len(result)
 
-    displayEnd = displayStart + 10  # at most 5 results per page
+    displayEnd = displayStart + 10  # at most 10 results per page
     if displayEnd >= resultLength: # prevent integer overflow
         displayEnd = resultLength
 

@@ -86,7 +86,7 @@ def answer_question(client, db, searchResult, userID):
 
     return searchResult
 
-def view_question(client, db, searchResult):
+def view_question(client, db, searchResult, userID):
     ''' View a specified question '''
 
     avaliable_posts = list(searchResult.keys())
@@ -240,12 +240,65 @@ def view_question(client, db, searchResult):
 
             elif userInput == 2:
                 # prompt to upvote
-                searchResult = vote_post(client, db, searchResult, avaliable_ans)
+                searchResult = vote_post(client, db, searchResult, avaliable_ans, userID)
 
 
-def vote_post(client, db, searchResult, avaliable_answers):
+def vote_post(client, db, searchResult, avaliable_answers, userID):
     ''' upvote a question or answer '''
+    # Prompt for user to input PID
+    avaliable_posts = list(searchResult.keys())
+    userInput = input("Enter Post Id >>> ").strip()
+    if not userInput.isdigit() or (int(userInput) not in avaliable_posts and int(userInput) not in avaliable_answers):
+        print("\nError: Invalid Post Id\n")
+        return searchResult
+    PID = int(userInput)
 
+    collection_votes = db["Votes"]
+    # check if user has already upvoted
+    if userID:
+        userID = str(userID)
+        pid = str(PID)
+        check = collection_votes.find_one({"UserId": userID, "PostId": pid})
+        if check:
+            print("\nError: Already voted\n")
+            return searchResult
+
+    collection_posts = db["Posts"]
+
+    post = collection_posts.find_one({"_id": PID})
+    try:
+        votes = int(post["Score"])
+        votes += 1
+    except KeyError:
+        votes = 1
+    
+    collection_posts.update_one({"_id": PID}, {"$set": {"Score": votes}})
+
+    votes_row = dict()
+
+    # assign VID
+    maxVID = collection_votes.find_one(sort=[("_id", -1)])["_id"] # First find the document containing the max Id, then extract its Id field
+    assert type(maxVID) == int, "maxPID type error (maxVID = {})".format(maxVID)
+
+    newId = maxVID + 1
+    votes_row["_id"] = newId
+    votes_row["PostId"] = str(PID)
+    votes_row["VoteTypeId"] = "2"
+    if userID:
+        votes_row["UserId"] = str(userID)
+    votes_row["CreationDate"] = systemFunctions.get_currentTime()
+
+    collection_votes.insert_one(votes_row)
+
+    try:
+        vt = searchResult[PID]["Score"]
+        vt += 1
+    except KeyError:
+        vt = 1
+
+    if PID in avaliable_posts:
+        searchResult[PID]["Score"] = vt
+    print("\nVote successful\n")
     return searchResult
 
 def question_actions(client, db, userID, searchResult):
@@ -288,29 +341,30 @@ def question_actions(client, db, userID, searchResult):
             elif userInput == 1:
                 searchResult = answer_question(client, db, searchResult, userID)
             elif userInput == 2:
-                searchResult, avaliable_answers = view_question(client, db, searchResult)
+                searchResult, avaliable_answers = view_question(client, db, searchResult, userID)
             elif userInput == 3:
-                searchResult = vote_post(client, db, searchResult, avaliable_answers)
+                searchResult = vote_post(client, db, searchResult, avaliable_answers, userID)
             elif userInput == 4:
                 # Next page
-                displayStart += 10
-                if displayStart >= len(avaliable_posts):
+                if (displayStart + 10) >= len(avaliable_posts):
                     print("Error: This is the last page")
                 else:
+                    displayStart += 10
                     systemFunctions.display_result(columnNames, result, displayStart)
 
             elif userInput == 5:
                 # Prev page
                 displayStart -= 10
-                if displayStart <= 0:
+                if displayStart < 0:
                     print("Error: This is the first page")
+                    displayStart = 0
                 else:
                     systemFunctions.display_result(columnNames, result, displayStart)
 
             elif userInput == 6:
                 # Refresh display, assuming changes in searchResult
                 result = [[key, item["Title"], item["CreationDate"], item["Score"], item["AnswerCount"]] for key, item in searchResult.items()]
-                result = sorted(result, key=lambda x: x[2], reverse=True)
+                result = sorted(result, key=lambda x: x[3], reverse=True)
                 systemFunctions.display_result(columnNames, result, displayStart)
 
             else:

@@ -78,7 +78,8 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\nUser Interrupted.\nGoodBye.")
         exit(0)
+    '''
     except Exception as e:
         print("Fatal error:",e)
         os.system("stty sane")
-        exit(1)
+        exit(1)'''
