@@ -230,7 +230,7 @@ def view_question(client, db, searchResult, userID):
                     print("\nViewing Answer p/{}".format(PID))
                     if PID == accans:
                         print("{:^90}".format("*** Accepted Answer ***"))
-                    title, body = __extract_title_body(ans, answer=True)
+                    title, body = __extract_title_body(ans, answer=False)
                     systemFunctions.print_text(title, body)
                     print("- "*45)
                     for key, item in ans.items():
