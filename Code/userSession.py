@@ -157,10 +157,25 @@ def view_question(client, db, searchResult):
         accepted_ans = collection_posts.find_one({"_id": accans})
         title, body = __extract_title_body(accepted_ans, answer=True)
         systemFunctions.print_text(title, body)
-        print('=' * 90)
-        for key, item in accepted_ans.items():
-            key = str(key) + ":"
-            print("{:<20} {}".format(key, item))
+        print('- ' * 45)
+        ans = accepted_ans
+
+        content = ans["_id"]
+        print("{:<20} {}".format("Post Id", content))
+        
+        try:
+            content = ans["CreationDate"]
+            print("{:<20} {}".format("Creation Date", content))
+        except KeyError:
+            pass
+
+        try:
+            content = ans["Score"]
+            print("{:<20} {}".format("Score", content))
+        except KeyError:
+            print("{:<20} {}".format("Score", 0))
+
+        print('='*90)
     
     parentID = str(userInput)
     answers = collection_posts.find({"PostTypeId": "2", "ParentId": parentID})
@@ -172,17 +187,66 @@ def view_question(client, db, searchResult):
         # print answers
         title, body = __extract_title_body(ans, answer=True)
         systemFunctions.print_text(title, body)
+        print('- '*45)
+        content = ans["_id"]
+        print("{:<20} {}".format("Post Id", content))
+        
+        try:
+            content = ans["CreationDate"]
+            print("{:<20} {}".format("Creation Date", content))
+        except KeyError:
+            pass
+
+        try:
+            content = ans["Score"]
+            print("{:<20} {}".format("Score", content))
+        except KeyError:
+            print("{:<20} {}".format("Score", 0))
+
         print('=' * 90)
-        for key, item in ans.items():
-            key = str(key) + ":"
-            print("{:<20} {}".format(key, item))
-    print('=' * 90)
     print()
-    return searchResult, avaliable_ans
+    while True:
+        print("Avaliable actions:")
+        print("1. View details of an answer")
+        print("2. Upvote an answer")
+        print("3. Return to search result")
+        userInput = input("(1/2/3) >>> ").strip()
+        if not userInput.isdigit() or int(userInput) not in [1,2,3]:
+            print("Error: Invalid Input")
+        else:
+            userInput = int(userInput)
+            if userInput == 3:
+                # Return to previous page
+                return searchResult, avaliable_ans
+            elif userInput == 1:
+                # Detailed view of an answer
+
+                PID = input("Enter Post Id >>> ").strip()
+                if not PID.isdigit() or int(PID) not in avaliable_ans:
+                    print("Error: Invalid Post Id")
+                else:
+                    PID = int(PID)
+                    ans = collection_posts.find_one({"_id": PID})
+                    print("\nViewing Answer p/{}".format(PID))
+                    if PID == accans:
+                        print("{:^90}".format("*** Accepted Answer ***"))
+                    title, body = __extract_title_body(ans, answer=True)
+                    systemFunctions.print_text(title, body)
+                    print("- "*45)
+                    for key, item in ans.items():
+                        print("{:<20} {}".format(key, item))
+                    print("="*90)
+                    print()
+
+            elif userInput == 2:
+                # prompt to upvote
+                searchResult = vote_post(client, db, searchResult, avaliable_ans)
 
 
 def vote_post(client, db, searchResult, avaliable_answers):
-    pass
+    ''' upvote a question or answer '''
+
+    return searchResult
 
 def question_actions(client, db, userID, searchResult):
     ''' Function Answer, List answers, action-vote'''
