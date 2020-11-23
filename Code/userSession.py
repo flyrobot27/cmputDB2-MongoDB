@@ -233,7 +233,7 @@ def view_question(client, db, searchResult, userID):
                     title, body = __extract_title_body(ans, answer=False)
                     systemFunctions.print_text(title, body)
                     print("- "*45)
-                    for key, item in sorted(ans.items(), key=lambda x: x[0], reversed=True):
+                    for key, item in sorted(ans.items(), key=lambda x: x[0], reverse=True):
                         key = str(key) + ':'
                         print("{:<20} {}".format(key, item))
                     print("="*90)
