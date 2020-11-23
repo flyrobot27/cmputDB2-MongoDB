@@ -5,7 +5,7 @@ Steven Heung (syheung)
 Nat Beleke (beleke)
 
 Collarberation:
-Nat Beleke
+We did not collaberate with anyone outside of our group
 
 Source:
 PyMongo Python3.5 documentation:
