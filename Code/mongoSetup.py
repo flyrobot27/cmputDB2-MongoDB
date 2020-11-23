@@ -41,7 +41,7 @@ def db_init_thread(f):
         # store into database as batches
         batch = list()
         i = 0
-        MAX_BATCH_SIZE = 10000
+        MAX_BATCH_SIZE = 50000
 
         for fo in fileobject:
             fo["_id"] = int(fo["Id"])
